@@ -22,24 +22,20 @@ except Exception as e:
     print(f"Couldn't connect to the Database: '{e}'")
 
 monthly_comments =  pd.read_sql_query("""
-SELECT 
-    strftime('%Y-%m', comments.created_at) AS year_month,
-    COUNT(comments.id) AS total_comments
-FROM
-    posts                                      
-JOIN
-    comments
-ON
-    posts.id = comments.post_id
-WHERE
-    posts.user_id = (SELECT id FROM users WHERE username='WildHorse') 
-GROUP BY
-    year_month
+SELECT
+    STRFTIME('%Y-%m', c.created_at) AS month,
+    COUNT(c.id) AS monthly_comments,
+    SUM(COUNT(c.id)) OVER (ORDER BY STRFTIME('%Y-%m', c.created_at)) AS cumulative_comments
+FROM comments c
+JOIN posts p ON c.post_id = p.id
+JOIN users u ON p.user_id = u.id
+WHERE u.username = 'WildHorse'
+GROUP BY month
 """, conn)
 
 conn.close()
 
-plt.plot(monthly_comments['year_month'], monthly_comments['total_comments'])
+plt.plot(monthly_comments['month'], monthly_comments['monthly_comments'])
 
 plt.gcf().canvas.manager.set_window_title("Users' Comments Plot")
 plt.title('Monthly comments on @WildHorse posts')
